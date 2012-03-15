@@ -13,6 +13,8 @@ Execute a full setup and test with
 
     rake qa
 
+The servers should now be available at http://localhost:7474, http://localhost:7475 and http://localhost:7476
+
 Contacts
 --------
 

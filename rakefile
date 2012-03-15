@@ -22,6 +22,7 @@ https_port = 8484
 ha_server_id = 1
 ha_server = 6001
 jmx_port = 3637
+backup_port = 1234
 
 
 task :default => 'qa'
@@ -91,37 +92,32 @@ end
 
 task :change_config do
   machine_list = server_list(machines, local_ip)
-
+  i = 0
   machines.each do |machine| 
 
-    replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1', machine + "/conf/neo4j.properties")
+    replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
     replace_in_file('#ha.coordinators=localhost:2181', coordinators_list(machines, local_ip, zk_client_port), machine + "/conf/neo4j.properties")  
     replace_in_file('#ha.cluster_name =', "ha.cluster_name="+cluster_name, machine + "/conf/neo4j.properties")  
-    replace_in_file('#ha.server_id=', "ha.server_id=" + ha_server_id.to_s, machine + "/conf/neo4j.properties")
-    replace_in_file("#ha.server = localhost:6001", "ha.server = "+local_ip+":" + ha_server.to_s, machine + "/conf/neo4j.properties")
-    ha_server_id += 1
-    ha_server += 1
-
+    replace_in_file('enable_online_backup=true', "online_backup_enabled=true\nonline_backup_port="+(backup_port+i).to_s, machine + "/conf/neo4j.properties")  
+    replace_in_file('#ha.server_id=', "ha.server_id=" +(ha_server_id+i).to_s, machine + "/conf/neo4j.properties")
+    replace_in_file("#ha.server = localhost:6001", "ha.server = "+local_ip+":" + (ha_server+i).to_s, machine + "/conf/neo4j.properties")
+    
     replace_in_file('server.1=localhost:2888:3888', machine_list, machine + "/conf/coord.cfg")
     replace_in_file('#server.2=my_second_server:2889:3889', "", machine + "/conf/coord.cfg")
     replace_in_file('#server.3=192.168.1.1:2890:3890', "", machine + "/conf/coord.cfg")
   
-    replace_in_file('clientPort=2181', "clientPort=" + zk_client_port.to_s, machine + "/conf/coord.cfg")
-    zk_client_port += 1
+    replace_in_file('clientPort=2181', "clientPort=" + (zk_client_port+i).to_s, machine + "/conf/coord.cfg")
 
 
-    replace_in_file('org.neo4j.server.webserver.port=7474', "org.neo4j.server.webserver.port=" + web_server_port.to_s, machine + "/conf/neo4j-server.properties")
-  web_server_port += 1
+    replace_in_file('org.neo4j.server.webserver.port=7474', "org.neo4j.server.webserver.port=" + (web_server_port+i).to_s, machine + "/conf/neo4j-server.properties")
     
-    replace_in_file('org.neo4j.server.webserver.https.port=7473', "org.neo4j.server.webserver.https.port=" + https_port.to_s, machine + "/conf/neo4j-server.properties")
-    https_port += 1
+    replace_in_file('org.neo4j.server.webserver.https.port=7473', "org.neo4j.server.webserver.https.port=" + (https_port+i).to_s, machine + "/conf/neo4j-server.properties")
     
     replace_in_file('#org.neo4j.server.database.mode=HA', "org.neo4j.server.database.mode=HA", machine + "/conf/neo4j-server.properties")
     
-    replace_in_file('#wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=3637', "wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=" + jmx_port.to_s, machine + "/conf/neo4j-wrapper.conf")
-    replace_in_file('#wrapper.java.additional.4=-Dcom.sun.management.jmxremote.authenticate=true', "wrapper.java.additional.4=-Dcom.sun.management.jmxremote.authenticate=false" + jmx_port.to_s, machine + "/conf/neo4j-wrapper.conf")
-    jmx_port += 1
-
+    replace_in_file('#wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=3637', "wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=" + (jmx_port+i).to_s, machine + "/conf/neo4j-wrapper.conf")
+    replace_in_file('#wrapper.java.additional.4=-Dcom.sun.management.jmxremote.authenticate=true', "wrapper.java.additional.4=-Dcom.sun.management.jmxremote.authenticate=false" + (jmx_port+i).to_s, machine + "/conf/neo4j-wrapper.conf")
+    i += 1
   end
 
 end
@@ -136,6 +132,8 @@ task :start_coordinators do
   machines.each do |machine|
     system(machine + "/bin/neo4j-coordinator start")
   end
+  puts "waiting a sec for the coordinators to be ready ...."
+  sleep 5
 
 end
 
@@ -145,9 +143,16 @@ task :start_cluster do
   end
 end
 
-task :qa => [:download_neo4j, :untar, :clone, :change_config, :start_coordinators, :start_cluster, :test] do
+task :setup_cluster => [:download_neo4j, :untar, :clone, :change_config, :start_coordinators, :start_cluster] do
 
 end
+
+task :qa => [:setup_cluster, :test] do
+
+end
+
+
+
 
 def execute(cmd)
   puts "executing '"<< cmd << "'"
@@ -166,6 +171,9 @@ task :test do
   execute(machines[2].to_s + "/bin/neo4j-backup -full -from ha://"+local_ip+":"+zk_client_port.to_s + " -to " + machines[2].to_s+ "/backup -ha.cluster_name "+cluster_name)
   # Create a node on machineC
   execute(machines[2] + "/bin/neo4j-shell -c 'mknode'")
+
+  #stop master (machineA)
+  execute(machines[0].to_s << "/bin/neo4j stop")
   
   #execute incremental backup
   execute(machines[2].to_s + "/bin/neo4j-backup -incremental -from ha://"+local_ip+":"+(zk_client_port+1).to_s + " -to " + machines[2].to_s+ "/backup -ha.cluster_name "+cluster_name)

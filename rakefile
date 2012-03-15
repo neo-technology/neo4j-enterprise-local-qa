@@ -149,16 +149,26 @@ task :qa => [:download_neo4j, :untar, :clone, :change_config, :start_coordinator
 
 end
 
+def execute(cmd)
+  puts "executing '"<< cmd << "'"
+  system(cmd)
+end
+
 task :test do
 
   # Create a node on machineA
-  system(machines[1] + "/bin/neo4j-shell -c 'mknode'")
+  execute(machines[0] + "/bin/neo4j-shell -c 'mknode'")
 
   # Make sure it's propagated to the slaves
-  system(machines[2] + "/bin/neo4j-shell -c 'cd -a 1 && set name prop1'")
+  execute(machines[1] + "/bin/neo4j-shell -c 'cd -a 1 && set name prop1'")
 
   #do an onine backup on machine 3
-  system(machines[3].to_s + "/bin/neo4j-backup -full -from ha://"+local_ip+":"+zk_client_port.to_s + " -to " + machines[2].to_s+ "/backup -cluster "+cluster_name)
+  execute(machines[2].to_s + "/bin/neo4j-backup -full -from ha://"+local_ip+":"+zk_client_port.to_s + " -to " + machines[2].to_s+ "/backup -ha.cluster_name "+cluster_name)
+  # Create a node on machineC
+  execute(machines[2] + "/bin/neo4j-shell -c 'mknode'")
+  
+  #execute incremental backup
+  execute(machines[2].to_s + "/bin/neo4j-backup -incremental -from ha://"+local_ip+":"+(zk_client_port+1).to_s + " -to " + machines[2].to_s+ "/backup -ha.cluster_name "+cluster_name)
 
 end
 

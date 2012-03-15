@@ -5,6 +5,14 @@ This (naive) rakefile will set up a local cluster of Neo4j HA servers. By defaul
 
     machines = ["machineA", "machineB", "machineC"] # give each machine a unique name
 
+Adjust your local machine ip if needed
+
+    local_ip = '172.16.12.142'
+
+Execute a full setup and test with
+
+    rake qa
+
 Contacts
 --------
 

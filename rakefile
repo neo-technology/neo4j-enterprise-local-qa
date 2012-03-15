@@ -2,8 +2,8 @@ require 'net/http'
 require 'uri'
 
 #the ip of your local machine
-local_ip = '172.16.12.142'
-#local_ip = 'localhost'
+#local_ip = '172.16.12.142'
+local_ip = 'localhost'
 
 # This is where you configure the product version
 filename = "neo4j-enterprise-1.7.M01"
@@ -13,6 +13,15 @@ tarfile = filename + "-unix.tar.gz"
 
 # Three machines by default. You can add more, but be sure to give each a unique name
 machines = ["machineA", "machineB", "machineC"]
+
+cluster_name="local.jvm.only.cluster"
+
+zk_client_port = 2181
+web_server_port = 7474
+https_port = 8484
+ha_server_id = 1
+ha_server = 6001
+jmx_port = 3637
 
 
 task :default => 'qa'
@@ -58,13 +67,12 @@ def replace_in_file(regex, replacement, file)
   File.open(file, "w") { |file| file << str }
 end
 
-def coordinators_list(machines, local_ip)
-  port = 2181
+def coordinators_list(machines, local_ip, start_port)
   str = "ha.coordinators="
 
   (1..machines.length).each do |i|
-    str << local_ip << ":" << port.to_s << ","
-    port += 1 
+    str << local_ip << ":" << start_port.to_s << ","
+    start_port += 1 
   end
  
   str.chomp(',')
@@ -82,19 +90,13 @@ end
 
 
 task :change_config do
-  zk_client_port = 2181
-  web_server_port = 7474
-  https_port = 8484
-  ha_server_id = 1
-  ha_server = 6001
-  jmx_port = 3637
   machine_list = server_list(machines, local_ip)
 
   machines.each do |machine| 
 
     replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1', machine + "/conf/neo4j.properties")
-    replace_in_file('#ha.coordinators=localhost:2181', coordinators_list(machines, local_ip), machine + "/conf/neo4j.properties")  
-    replace_in_file('#ha.cluster_name =', "ha.cluster_name=local.jvm.only.cluster", machine + "/conf/neo4j.properties")  
+    replace_in_file('#ha.coordinators=localhost:2181', coordinators_list(machines, local_ip, zk_client_port), machine + "/conf/neo4j.properties")  
+    replace_in_file('#ha.cluster_name =', "ha.cluster_name="+cluster_name, machine + "/conf/neo4j.properties")  
     replace_in_file('#ha.server_id=', "ha.server_id=" + ha_server_id.to_s, machine + "/conf/neo4j.properties")
     replace_in_file("#ha.server = localhost:6001", "ha.server = "+local_ip+":" + ha_server.to_s, machine + "/conf/neo4j.properties")
     ha_server_id += 1
@@ -143,14 +145,21 @@ task :start_cluster do
   end
 end
 
-task :qa => [:download_neo4j, :untar, :clone, :change_config, :start_coordinators, :start_cluster] do
+task :qa => [:download_neo4j, :untar, :clone, :change_config, :start_coordinators, :start_cluster, :test] do
+
+end
+
+task :test do
+
   # Create a node on machineA
   system(machines[1] + "/bin/neo4j-shell -c 'mknode'")
+
   # Make sure it's propagated to the slaves
   system(machines[2] + "/bin/neo4j-shell -c 'cd -a 1 && set name prop1'")
 
-  #do an onine backup
-  system(machines[1] + "/bin/neo4j-backup -full -from ha://"+local_ip+":2181 -to bA")
+  #do an onine backup on machine 3
+  system(machines[3].to_s + "/bin/neo4j-backup -full -from ha://"+local_ip+":"+zk_client_port.to_s + " -to " + machines[2].to_s+ "/backup -cluster "+cluster_name)
+
 end
 
 task :clean do

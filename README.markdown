@@ -18,7 +18,7 @@ The servers should now be available at http://localhost:7474, http://localhost:7
 Contacts
 --------
 
-[Jim Webber](http://jimwebber.org/), [@jimwebber](http://twitter.com/jimwebber)
+[Jim Webber](mailto:jim@neotechnology.com), [@jimwebber](http://twitter.com/jimwebber)
 
 
 

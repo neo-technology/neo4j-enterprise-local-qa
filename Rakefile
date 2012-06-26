@@ -6,7 +6,7 @@ require 'uri'
 local_ip = 'localhost'
 
 # This is where you configure the product version
-filename = "neo4j-enterprise-1.6.2-SNAPSHOT"
+filename = "neo4j-enterprise-1.8.M05"
 
 # You probably don't need to touch this
 tarfile = filename + "-unix.tar.gz"
@@ -98,7 +98,7 @@ task :change_config do
     replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
     replace_in_file('#ha.coordinators=localhost:2181', coordinators_list(machines, local_ip, zk_client_port), machine + "/conf/neo4j.properties")  
     replace_in_file('#ha.cluster_name =', "ha.cluster_name="+cluster_name, machine + "/conf/neo4j.properties")  
-    replace_in_file('enable_online_backup=true', "online_backup_enabled=true\nonline_backup_port="+(backup_port+i).to_s, machine + "/conf/neo4j.properties")  
+    replace_in_file('online_backup_enabled=true', "online_backup_enabled=true\nonline_backup_port="+(backup_port+i).to_s, machine + "/conf/neo4j.properties")
     replace_in_file('#ha.server_id=', "ha.server_id=" +(ha_server_id+i).to_s, machine + "/conf/neo4j.properties")
     replace_in_file("#ha.server = localhost:6001", "ha.server = "+local_ip+":" + (ha_server+i).to_s, machine + "/conf/neo4j.properties")
     
@@ -174,7 +174,7 @@ task :test do
 
   #stop master (machineA)
   execute(machines[0].to_s << "/bin/neo4j stop")
-  
+
   #execute incremental backup
   execute(machines[2].to_s + "/bin/neo4j-backup -incremental -from ha://"+local_ip+":"+(zk_client_port+1).to_s + " -to " + machines[2].to_s+ "/backup -ha.cluster_name "+cluster_name)
 

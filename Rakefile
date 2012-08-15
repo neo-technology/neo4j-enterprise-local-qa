@@ -6,7 +6,7 @@ require 'uri'
 local_ip = 'localhost'
 
 # This is where you configure the product version
-filename = "neo4j-enterprise-1.8.M05"
+filename = "neo4j-enterprise-1.8.M07"
 
 # You probably don't need to touch this
 tarfile = filename + "-unix.tar.gz"

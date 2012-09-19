@@ -15,11 +15,6 @@ Execute a full setup and test with
 
 The servers should now be available at http://localhost:7474, http://localhost:7475 and http://localhost:7476
 
-Contacts
---------
-
-[Jim Webber](mailto:jim@neotechnology.com), [@jimwebber](http://twitter.com/jimwebber)
-
 
 
 

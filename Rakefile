@@ -86,7 +86,7 @@ task :change_config do
 
     replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
     replace_in_file('#enable_remote_shell = port=1234', 'enable_remote_shell = port='+(shell_port+i).to_s, machine + "/conf/neo4j.properties")  
-    #replace_in_file('#ha.cluster_server=127.0.0.1:5001', "#ha.cluster_server=127.0.0.1:5001"+cluster_name, machine + "/conf/neo4j.properties")  
+    replace_in_file('#ha.cluster_server=127.0.0.1:5001', "ha.cluster_server="+local_ip+":"+(cluster_port+i).to_s, machine + "/conf/neo4j.properties")  
     replace_in_file('online_backup_port=6362', "online_backup_port="+(backup_port+i).to_s, machine + "/conf/neo4j.properties")
     replace_in_file('#ha.server_id=', "ha.server_id=" +(ha_server_id+i).to_s, machine + "/conf/neo4j.properties")
     replace_in_file("#ha.server = 127.0.0.1:6001", "ha.server = "+local_ip+":" + (ha_server+i).to_s, machine + "/conf/neo4j.properties")

@@ -3,10 +3,10 @@ require 'uri'
 
 #the ip of your local machine
 #local_ip = '172.16.12.142'
-local_ip = '192.168.0.34'
+local_ip = '192.168.0.10'
 
 # This is where you configure the product version
-filename = "neo4j-enterprise-1.9-SNAPSHOT"
+filename = "neo4j-enterprise-1.9.M02"
 
 # You probably don't need to touch this
 tarfile = filename + "-unix.tar.gz"
@@ -85,23 +85,20 @@ task :change_config do
   machines.each do |machine| 
 
     replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
-    replace_in_file('#enable_remote_shell = port=1234', 'enable_remote_shell = port='+(shell_port+i).to_s, machine + "/conf/neo4j.properties")  
-    replace_in_file('#ha.cluster_server=127.0.0.1:5001', "ha.cluster_server="+local_ip+":"+(cluster_port+i).to_s, machine + "/conf/neo4j.properties")  
+    replace_in_file('#remote_shell_enabled=true', 'remote_shell_enabled=true', machine + "/conf/neo4j.properties")  
+    replace_in_file('#remote_shell_port=1234', 'remote_shell_port = '+(shell_port+i).to_s, machine + "/conf/neo4j.properties")  
+    replace_in_file('#ha.cluster_server=:5001-5099', "ha.cluster_server="+local_ip+":"+(cluster_port+i).to_s, machine + "/conf/neo4j.properties")  
     replace_in_file('online_backup_port=6362', "online_backup_port="+(backup_port+i).to_s, machine + "/conf/neo4j.properties")
     replace_in_file('#ha.server_id=', "ha.server_id=" +(ha_server_id+i).to_s, machine + "/conf/neo4j.properties")
-    replace_in_file("#ha.server = 127.0.0.1:6001", "ha.server = "+local_ip+":" + (ha_server+i).to_s, machine + "/conf/neo4j.properties")
-    
-    replace_in_file('#ha.initial_hosts=127.0.0.1:5001,127.0.0.1:5002,127.0.0.1:5003', "ha.initial_hosts="+machine_list, machine + "/conf/neo4j.properties")
+    replace_in_file("#ha.server=:6001", "ha.server = "+local_ip+":" + (ha_server+i).to_s, machine + "/conf/neo4j.properties")
+    replace_in_file('#ha.initial_hosts=:5001,:5002,:5003', "ha.initial_hosts="+machine_list, machine + "/conf/neo4j.properties")
+
     #replace_in_file('#server.2=my_second_server:2889:3889', "", machine + "/conf/coord.cfg")
     #replace_in_file('#server.3=192.168.1.1:2890:3890', "", machine + "/conf/coord.cfg")
-  
     #replace_in_file('clientPort=2181', "clientPort=" + (zk_client_port+i).to_s, machine + "/conf/coord.cfg")
 
-
     replace_in_file('org.neo4j.server.webserver.port=7474', "org.neo4j.server.webserver.port=" + (web_server_port+i).to_s, machine + "/conf/neo4j-server.properties")
-    
     replace_in_file('org.neo4j.server.webserver.https.port=7473', "org.neo4j.server.webserver.https.port=" + (https_port+i).to_s, machine + "/conf/neo4j-server.properties")
-    
     replace_in_file('#org.neo4j.server.database.mode=HA', "org.neo4j.server.database.mode=HA", machine + "/conf/neo4j-server.properties")
     
     replace_in_file('#wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=3637', "wrapper.java.additional.3=-Dcom.sun.management.jmxremote.port=" + (jmx_port+i).to_s+"\n", machine + "/conf/neo4j-wrapper.conf")
@@ -117,6 +114,14 @@ task :start_cluster do
     system(machine + "/bin/neo4j start")
   end
 end
+
+
+task :stop_cluster do
+  machines.each do |machine|
+    system(machine + "/bin/neo4j stop")
+  end
+end
+
 
 task :setup_cluster => [:download_neo4j, :untar, :clone, :change_config] do
 

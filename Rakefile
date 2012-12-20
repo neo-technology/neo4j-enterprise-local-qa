@@ -6,7 +6,7 @@ require 'uri'
 local_ip = '192.168.0.10'
 
 # This is where you configure the product version
-filename = "neo4j-enterprise-1.9.M02"
+filename = "neo4j-enterprise-1.9.M03"
 
 # You probably don't need to touch this
 tarfile = filename + "-unix.tar.gz"
@@ -84,7 +84,7 @@ task :change_config do
   i = 0
   machines.each do |machine| 
 
-    replace_in_file('ha.pull_interval = 10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
+    replace_in_file('ha.pull_interval=10', 'ha.pull_interval = 1ms', machine + "/conf/neo4j.properties")
     replace_in_file('#remote_shell_enabled=true', 'remote_shell_enabled=true', machine + "/conf/neo4j.properties")  
     replace_in_file('#remote_shell_port=1234', 'remote_shell_port = '+(shell_port+i).to_s, machine + "/conf/neo4j.properties")  
     replace_in_file('#ha.cluster_server=:5001-5099', "ha.cluster_server="+local_ip+":"+(cluster_port+i).to_s, machine + "/conf/neo4j.properties")  

@@ -3,7 +3,7 @@ require 'uri'
 
 #the ip of your local machine
 #local_ip = '172.16.12.142'
-local_ip = '192.168.0.10'
+local_ip = ''
 
 # This is where you configure the product version
 filename = "neo4j-enterprise-1.9.M03"
